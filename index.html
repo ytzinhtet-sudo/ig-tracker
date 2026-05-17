@@ -657,13 +657,16 @@ async function scanAll(type) {
             ...imgs.map(img => ({ inline_data: { mime_type: 'image/jpeg', data: img.b64 } })),
             { text: `These are screenshots of an Instagram ${type} list. Extract every visible username (the @handle or text below the display name). Return ONLY a JSON array of strings, no @ symbols, all lowercase. Raw JSON only, no markdown. Example: ["user1","user2"]` }
           ]
-        }]
+        }],
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.1 }
       })
     });
     const data = await resp.json();
     let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     text = text.replace(/```json|```/g, '').trim();
-    const users = JSON.parse(text);
+    const match = text.match(/\[[\s\S]*\]/);
+    if (!match) throw new Error('No usernames found — try fewer screenshots');
+    const users = JSON.parse(match[0]);
     if (!Array.isArray(users) || !users.length) throw new Error('No usernames found');
     const unique = [...new Set(users.map(u => u.trim().toLowerCase().replace(/^@/, '')).filter(Boolean))];
     const label = document.getElementById(`lbl-${type}`).value.trim() || new Date().toLocaleDateString();
