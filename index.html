@@ -39,10 +39,11 @@ body {
   line-height: 1.5;
 }
 header {
-  padding: 28px 32px 20px;
+  padding: 20px 24px 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
 }
 header h1 {
@@ -56,6 +57,112 @@ header span {
   font-size: 12px;
   color: var(--muted);
   font-family: var(--mono);
+}
+.key-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.key-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.key-dot.set { background: var(--green); }
+.key-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.key-btn:hover { color: var(--text); }
+
+/* API key modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+}
+.modal-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.modal-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.modal-sub a { color: var(--followers); }
+.modal-field { margin-bottom: 14px; }
+.modal-field label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  display: block;
+  margin-bottom: 5px;
+  letter-spacing: 0.04em;
+}
+.modal-field input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+  outline: none;
+  letter-spacing: 0.02em;
+}
+.modal-field input:focus { border-color: var(--border2); }
+.modal-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.modal-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.modal-btn.primary {
+  background: var(--followers-dim);
+  border-color: var(--followers-border);
+  color: var(--followers);
+}
+.modal-hint {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--surface2);
+  border-radius: 6px;
+  line-height: 1.7;
 }
 .layout {
   display: grid;
@@ -340,9 +447,40 @@ select {
 </head>
 <body>
 
+<!-- API Key Modal -->
+<div class="modal-overlay" id="key-modal">
+  <div class="modal">
+    <div class="modal-title">Anthropic API key</div>
+    <div class="modal-sub">Your key is saved only in your browser — never sent anywhere except directly to Anthropic when scanning.</div>
+    <div class="modal-field">
+      <label>paste your api key</label>
+      <input type="password" id="key-input" placeholder="AIza..."/>
+    </div>
+    <div class="modal-hint">
+      How to get a key:<br>
+      1. Go to <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a><br>
+      2. Sign up / log in<br>
+      3. Click "Get API Key" → "Create API Key"<br>
+      4. Copy and paste it above<br>
+      5. Free tier — no credit card needed
+    </div>
+    <div class="modal-row">
+      <button class="modal-btn" onclick="closeKeyModal()">cancel</button>
+      <button class="modal-btn primary" onclick="saveKey()">save key</button>
+    </div>
+  </div>
+</div>
+
 <header>
-  <h1>IG Tracker</h1>
-  <span>screenshot-based · claude vision</span>
+  <div style="display:flex;align-items:baseline;gap:12px">
+    <h1>IG Tracker</h1>
+    <span>screenshot-based · gemini vision</span>
+  </div>
+  <div class="key-badge">
+    <div class="key-dot" id="key-dot"></div>
+    <span id="key-label" style="color:var(--muted)">no api key</span>
+    <button class="key-btn" onclick="openKeyModal()">set key</button>
+  </div>
 </header>
 
 <div class="layout">
@@ -371,6 +509,7 @@ select {
 
 <script>
 const STORE = 'ig_tracker_v2';
+const KEY_STORE = 'ig_tracker_apikey';
 let snaps = [];
 const pendingImages = { following: [], followers: [] };
 
@@ -379,6 +518,34 @@ function loadSnaps() {
 }
 function saveSnaps() {
   try { localStorage.setItem(STORE, JSON.stringify(snaps)); } catch {}
+}
+function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
+function saveKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  localStorage.setItem(KEY_STORE, val);
+  updateKeyBadge();
+  closeKeyModal();
+}
+function openKeyModal() {
+  const k = getKey();
+  document.getElementById('key-input').value = k ? k : '';
+  document.getElementById('key-modal').classList.add('open');
+}
+function closeKeyModal() { document.getElementById('key-modal').classList.remove('open'); }
+function updateKeyBadge() {
+  const k = getKey();
+  const dot = document.getElementById('key-dot');
+  const lbl = document.getElementById('key-label');
+  if (k) {
+    dot.classList.add('set');
+    lbl.textContent = 'key set';
+    lbl.style.color = 'var(--green)';
+  } else {
+    dot.classList.remove('set');
+    lbl.textContent = 'no api key';
+    lbl.style.color = 'var(--muted)';
+  }
 }
 
 function buildSection(type) {
@@ -473,24 +640,28 @@ async function scanAll(type) {
   sts.className = 'status-msg loading';
   sts.textContent = 'scanning...';
 
+  const apiKey = getKey();
+  if (!apiKey) {
+    sts.className = 'status-msg err';
+    sts.textContent = 'no api key — tap "set key" in the header';
+    btn.disabled = false;
+    return;
+  }
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            ...imgs.map(img => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: img.b64 } })),
-            { type: 'text', text: `These are screenshots of an Instagram ${type} list. Extract every visible username (the @handle or text below the display name). Return ONLY a JSON array of strings, no @ symbols, all lowercase. Raw JSON only, no markdown. Example: ["user1","user2"]` }
+        contents: [{
+          parts: [
+            ...imgs.map(img => ({ inline_data: { mime_type: 'image/jpeg', data: img.b64 } })),
+            { text: `These are screenshots of an Instagram ${type} list. Extract every visible username (the @handle or text below the display name). Return ONLY a JSON array of strings, no @ symbols, all lowercase. Raw JSON only, no markdown. Example: ["user1","user2"]` }
           ]
         }]
       })
     });
     const data = await resp.json();
-    let text = (data.content || []).map(c => c.text || '').join('');
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     text = text.replace(/```json|```/g, '').trim();
     const users = JSON.parse(text);
     if (!Array.isArray(users) || !users.length) throw new Error('No usernames found');
@@ -574,6 +745,7 @@ function runDiff(type) {
 }
 
 loadSnaps();
+updateKeyBadge();
 ['following','followers'].forEach(type => {
   document.getElementById(`content-${type}`).innerHTML = buildSection(type);
   updateCount(type);
