@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IG Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #111;
+  --surface2: #181818;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0f0f0;
+  --muted: #666;
+  --muted2: #444;
+  --following: #7ee8a2;
+  --following-dim: rgba(126,232,162,0.1);
+  --following-border: rgba(126,232,162,0.25);
+  --followers: #89b4fa;
+  --followers-dim: rgba(137,180,250,0.1);
+  --followers-border: rgba(137,180,250,0.25);
+  --red: #f38ba8;
+  --red-dim: rgba(243,139,168,0.1);
+  --green: #a6e3a1;
+  --green-dim: rgba(166,227,161,0.1);
+  --radius: 10px;
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+header h1 {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+header span {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: calc(100vh - 73px);
+}
+.section {
+  padding: 28px 32px;
+  border-right: 1px solid var(--border);
+}
+.section:last-child { border-right: none; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.dot-following { background: var(--following); }
+.dot-followers { background: var(--followers); }
+.section-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.snap-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.sub-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 20px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+.stab {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.stab:hover { color: var(--text); }
+.stab.active {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+.spanel { display: none; }
+.spanel.active { display: block; }
+
+/* Upload zone */
+.upload-zone {
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--surface);
+}
+.upload-zone:hover { border-color: var(--border); background: var(--surface2); }
+.upload-zone input { display: none; }
+.uz-icon { font-size: 22px; margin-bottom: 8px; }
+.uz-main { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.uz-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* Form */
+.field { margin-bottom: 12px; }
+.field label { font-size: 11px; font-family: var(--mono); color: var(--muted); display: block; margin-bottom: 5px; letter-spacing: 0.04em; }
+input[type=text] {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color 0.15s;
+}
+input[type=text]:focus { border-color: var(--border2); }
+
+/* Preview grid */
+.preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.preview-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.preview-card img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+}
+.preview-card-name {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--muted);
+  padding: 5px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Buttons */
+.btn-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: #222; border-color: var(--border); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-accent-following {
+  background: var(--following-dim);
+  border-color: var(--following-border);
+  color: var(--following);
+}
+.btn-accent-following:hover { background: rgba(126,232,162,0.18); }
+.btn-accent-followers {
+  background: var(--followers-dim);
+  border-color: var(--followers-border);
+  color: var(--followers);
+}
+.btn-accent-followers:hover { background: rgba(137,180,250,0.18); }
+.status-msg {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  min-height: 16px;
+}
+.status-msg.ok { color: var(--green); }
+.status-msg.err { color: var(--red); }
+.status-msg.loading { color: var(--followers); }
+
+/* Scan result */
+.scan-result {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 8px;
+}
+.scan-result-hd {
+  font-size: 12px;
+  font-family: var(--mono);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pills-wrap { display: flex; flex-wrap: wrap; gap: 4px; }
+.pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+.pill-g { background: var(--green-dim); color: var(--green); border-color: rgba(166,227,161,0.25); }
+.pill-r { background: var(--red-dim); color: var(--red); border-color: rgba(243,139,168,0.25); }
+.pill-dim { background: var(--surface2); color: var(--muted); border-color: var(--border); }
+
+/* History */
+.history-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.snap-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 6px;
+}
+.snap-item-info {}
+.snap-label-text { font-size: 13px; font-weight: 500; }
+.snap-meta { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
+.btn-del {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(243,139,168,0.2);
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-del:hover { background: rgba(243,139,168,0.18); }
+
+/* Compare */
+.cmp-selects {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+select {
+  padding: 7px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--mono);
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 10px 8px;
+}
+.metric-val { font-size: 20px; font-weight: 500; font-family: var(--mono); }
+.metric-lbl { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.03em; }
+.diff-section { margin-bottom: 12px; }
+.diff-hd { font-size: 11px; font-family: var(--mono); color: var(--muted); letter-spacing: 0.04em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.diff-hd::before { content: ''; display: block; width: 6px; height: 6px; border-radius: 50%; }
+.diff-hd.lost::before { background: var(--red); }
+.diff-hd.gained::before { background: var(--green); }
+.diff-empty { font-size: 11px; font-family: var(--mono); color: var(--muted); padding: 16px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }
+
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .section { border-right: none; border-bottom: 1px solid var(--border); }
+  header { padding: 18px 20px 14px; }
+  .section { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IG Tracker</h1>
+  <span>screenshot-based · claude vision</span>
+</header>
+
+<div class="layout">
+  <div class="section" id="section-following">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot dot-following"></div>
+        <span class="section-name">Following</span>
+      </div>
+      <span class="snap-count" id="cnt-following">0 snapshots</span>
+    </div>
+    <div id="content-following"></div>
+  </div>
+
+  <div class="section" id="section-followers">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="dot dot-followers"></div>
+        <span class="section-name">Followers</span>
+      </div>
+      <span class="snap-count" id="cnt-followers">0 snapshots</span>
+    </div>
+    <div id="content-followers"></div>
+  </div>
+</div>
+
+<script>
+const STORE = 'ig_tracker_v2';
+let snaps = [];
+const pendingImages = { following: [], followers: [] };
+
+function loadSnaps() {
+  try { snaps = JSON.parse(localStorage.getItem(STORE)) || []; } catch { snaps = []; }
+}
+function saveSnaps() {
+  try { localStorage.setItem(STORE, JSON.stringify(snaps)); } catch {}
+}
+
+function buildSection(type) {
+  const color = type === 'following' ? 'following' : 'followers';
+  return `
+  <div class="sub-tabs">
+    <button class="stab active" onclick="showSTab('${type}','scan',this)">scan</button>
+    <button class="stab" onclick="showSTab('${type}','history',this)">history</button>
+    <button class="stab" onclick="showSTab('${type}','compare',this)">compare</button>
+  </div>
+
+  <div class="spanel active" id="sp-${type}-scan">
+    <div class="field">
+      <label>snapshot label</label>
+      <input type="text" id="lbl-${type}" placeholder="e.g. May 17"/>
+    </div>
+    <div class="upload-zone" onclick="document.getElementById('fi-${type}').click()">
+      <input type="file" id="fi-${type}" accept="image/*" multiple onchange="handleFiles('${type}', this.files)"/>
+      <div class="uz-icon">⬆</div>
+      <div class="uz-main">Upload screenshots</div>
+      <div class="uz-sub">scroll through IG and screenshot each page</div>
+    </div>
+    <div id="pg-${type}" style="display:none;margin-top:12px">
+      <div class="preview-grid" id="prev-${type}"></div>
+      <div class="btn-row">
+        <button class="btn btn-accent-${color}" id="scanbtn-${type}" onclick="scanAll('${type}')">scan with claude</button>
+        <button class="btn" onclick="clearImgs('${type}')">clear</button>
+        <span class="status-msg" id="sts-${type}"></span>
+      </div>
+      <div id="sres-${type}"></div>
+    </div>
+  </div>
+
+  <div class="spanel" id="sp-${type}-history">
+    <div id="hist-${type}"></div>
+  </div>
+
+  <div class="spanel" id="sp-${type}-compare">
+    <div class="cmp-selects">
+      <div style="flex:1;min-width:0"><label style="font-size:11px;font-family:var(--mono);color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.04em">older</label><select id="ca-${type}"></select></div>
+      <div style="flex:1;min-width:0"><label style="font-size:11px;font-family:var(--mono);color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.04em">newer</label><select id="cb-${type}"></select></div>
+      <button class="btn" onclick="runDiff('${type}')">diff</button>
+    </div>
+    <div id="dres-${type}"></div>
+  </div>`;
+}
+
+function showSTab(type, name, btn) {
+  btn.closest('.sub-tabs').querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['scan','history','compare'].forEach(n => {
+    document.getElementById(`sp-${type}-${n}`).classList.toggle('active', n === name);
+  });
+  if (name === 'history') renderHistory(type);
+  if (name === 'compare') renderCompareSelectors(type);
+}
+
+function handleFiles(type, files) {
+  pendingImages[type] = [];
+  const grid = document.getElementById(`prev-${type}`);
+  grid.innerHTML = '';
+  Array.from(files).forEach((f, i) => {
+    const r = new FileReader();
+    r.onload = e => {
+      pendingImages[type][i] = { name: f.name, b64: e.target.result.split(',')[1] };
+      const card = document.createElement('div');
+      card.className = 'preview-card';
+      card.innerHTML = `<img src="${e.target.result}"/><div class="preview-card-name">${f.name}</div>`;
+      grid.appendChild(card);
+    };
+    r.readAsDataURL(f);
+  });
+  document.getElementById(`pg-${type}`).style.display = 'block';
+  document.getElementById(`sres-${type}`).innerHTML = '';
+}
+
+function clearImgs(type) {
+  pendingImages[type] = [];
+  document.getElementById(`prev-${type}`).innerHTML = '';
+  document.getElementById(`pg-${type}`).style.display = 'none';
+  document.getElementById(`fi-${type}`).value = '';
+  document.getElementById(`sres-${type}`).innerHTML = '';
+  document.getElementById(`sts-${type}`).textContent = '';
+}
+
+async function scanAll(type) {
+  const imgs = pendingImages[type].filter(Boolean);
+  if (!imgs.length) return;
+  const btn = document.getElementById(`scanbtn-${type}`);
+  const sts = document.getElementById(`sts-${type}`);
+  btn.disabled = true;
+  sts.className = 'status-msg loading';
+  sts.textContent = 'scanning...';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            ...imgs.map(img => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: img.b64 } })),
+            { type: 'text', text: `These are screenshots of an Instagram ${type} list. Extract every visible username (the @handle or text below the display name). Return ONLY a JSON array of strings, no @ symbols, all lowercase. Raw JSON only, no markdown. Example: ["user1","user2"]` }
+          ]
+        }]
+      })
+    });
+    const data = await resp.json();
+    let text = (data.content || []).map(c => c.text || '').join('');
+    text = text.replace(/```json|```/g, '').trim();
+    const users = JSON.parse(text);
+    if (!Array.isArray(users) || !users.length) throw new Error('No usernames found');
+    const unique = [...new Set(users.map(u => u.trim().toLowerCase().replace(/^@/, '')).filter(Boolean))];
+    const label = document.getElementById(`lbl-${type}`).value.trim() || new Date().toLocaleDateString();
+    snaps.push({ id: Date.now(), label, date: new Date().toISOString(), type, users: unique });
+    saveSnaps();
+    updateCount(type);
+    sts.className = 'status-msg ok';
+    sts.textContent = `${unique.length} accounts saved`;
+    document.getElementById(`sres-${type}`).innerHTML = `
+      <div class="scan-result">
+        <div class="scan-result-hd" style="color:var(--green)">✓ ${unique.length} usernames in "${label}"</div>
+        <div class="pills-wrap">${unique.slice(0,32).map(u=>`<span class="pill pill-g">@${u}</span>`).join('')}${unique.length>32?`<span class="pill pill-dim">+${unique.length-32} more</span>`:''}</div>
+      </div>`;
+    btn.disabled = false;
+  } catch(e) {
+    sts.className = 'status-msg err';
+    sts.textContent = 'error: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+function updateCount(type) {
+  const n = snaps.filter(s => s.type === type).length;
+  document.getElementById(`cnt-${type}`).textContent = `${n} snapshot${n !== 1 ? 's' : ''}`;
+}
+
+function renderHistory(type) {
+  const el = document.getElementById(`hist-${type}`);
+  const list = snaps.filter(s => s.type === type).slice().reverse();
+  if (!list.length) { el.innerHTML = `<div class="history-empty">no snapshots yet</div>`; return; }
+  el.innerHTML = list.map(s => `
+    <div class="snap-item">
+      <div class="snap-item-info">
+        <div class="snap-label-text">${s.label}</div>
+        <div class="snap-meta">${s.users.length} accounts · ${new Date(s.date).toLocaleString()}</div>
+      </div>
+      <button class="btn-del" onclick="deleteSnap(${s.id},'${type}')">del</button>
+    </div>`).join('');
+}
+
+function deleteSnap(id, type) {
+  snaps = snaps.filter(s => s.id !== id);
+  saveSnaps();
+  updateCount(type);
+  renderHistory(type);
+}
+
+function renderCompareSelectors(type) {
+  const list = snaps.filter(s => s.type === type);
+  const opts = list.map(s => `<option value="${s.id}">${s.label} (${s.users.length})</option>`).join('');
+  document.getElementById(`ca-${type}`).innerHTML = opts;
+  document.getElementById(`cb-${type}`).innerHTML = opts;
+  if (list.length >= 2) {
+    document.getElementById(`ca-${type}`).selectedIndex = 0;
+    document.getElementById(`cb-${type}`).selectedIndex = list.length - 1;
+  }
+  document.getElementById(`dres-${type}`).innerHTML = '';
+}
+
+function runDiff(type) {
+  const aId = parseInt(document.getElementById(`ca-${type}`).value);
+  const bId = parseInt(document.getElementById(`cb-${type}`).value);
+  const A = snaps.find(s => s.id === aId), B = snaps.find(s => s.id === bId);
+  if (!A || !B || aId === bId) { document.getElementById(`dres-${type}`).innerHTML = '<div class="diff-empty">pick two different snapshots</div>'; return; }
+  const setA = new Set(A.users), setB = new Set(B.users);
+  const lost = A.users.filter(u => !setB.has(u));
+  const gained = B.users.filter(u => !setA.has(u));
+  const kept = A.users.filter(u => setB.has(u)).length;
+  const isF = type === 'followers';
+  document.getElementById(`dres-${type}`).innerHTML = `
+    <div class="metrics-row">
+      <div class="metric"><div class="metric-val" style="color:var(--red)">-${lost.length}</div><div class="metric-lbl">${isF ? 'unfollowed you' : 'unfollowed'}</div></div>
+      <div class="metric"><div class="metric-val" style="color:var(--green)">+${gained.length}</div><div class="metric-lbl">${isF ? 'new followers' : 'newly followed'}</div></div>
+      <div class="metric"><div class="metric-val">${kept}</div><div class="metric-lbl">unchanged</div></div>
+    </div>
+    ${lost.length ? `<div class="diff-section"><div class="diff-hd lost">${isF?'unfollowed you':'unfollowed'} (${lost.length})</div><div class="pills-wrap">${lost.map(u=>`<span class="pill pill-r">@${u}</span>`).join('')}</div></div>` : ''}
+    ${gained.length ? `<div class="diff-section"><div class="diff-hd gained">${isF?'new followers':'newly following'} (${gained.length})</div><div class="pills-wrap">${gained.map(u=>`<span class="pill pill-g">@${u}</span>`).join('')}</div></div>` : ''}
+    ${!lost.length && !gained.length ? '<div class="diff-empty">no changes between these snapshots</div>' : ''}`;
+}
+
+loadSnaps();
+['following','followers'].forEach(type => {
+  document.getElementById(`content-${type}`).innerHTML = buildSection(type);
+  updateCount(type);
+});
+</script>
+</body>
+</html>
